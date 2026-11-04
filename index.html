@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brother's Temperature Care Tracker</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at top left, #f8fafc 0%, #f1f5f9 55%, #eef2ff 100%);
+      color: #0f172a;
+    }
+    .thermometer-mercury {
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 pointer-events-none"></div>
+
+  <!-- Confirm Clear Modal -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-slate-100">
+      <div class="flex items-center gap-3.5 mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Clear All Readings?</h3>
+          <p class="text-xs text-slate-500">This will permanently remove all recorded entries.</p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 mb-6 leading-relaxed">Are you sure you want to clear the temperature log? This action will reset your averages and timeline.</p>
+      <div class="flex items-center justify-end gap-3">
+        <button id="cancelClearBtn" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Cancel</button>
+        <button id="confirmClearBtn" type="button" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 transition shadow-sm">Yes, Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Reading Modal -->
+  <div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-slate-100">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="editModalTitle" class="text-lg font-bold text-slate-900">Edit Reading</h3>
+        <button id="closeEditModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="editReadingForm" class="space-y-4">
+        <input type="hidden" id="editReadingId" />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="editTempInput" class="block text-xs font-semibold text-slate-500 mb-1.5">Temperature (<span class="unit-label">°F</span>)</label>
+            <input id="editTempInput" type="number" step="0.1" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label for="editLocationSelect" class="block text-xs font-semibold text-slate-500 mb-1.5">Method</label>
+            <select id="editLocationSelect" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Oral">Oral (Mouth)</option>
+              <option value="Forehead">Forehead</option>
+              <option value="Ear">Ear</option>
+              <option value="Underarm">Underarm</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="editTimeInput" class="block text-xs font-semibold text-slate-500 mb-1.5">Date &amp; Time</label>
+          <input id="editTimeInput" type="datetime-local" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label for="editNoteInput" class="block text-xs font-semibold text-slate-500 mb-1.5">Notes / Care Given</label>
+          <input id="editNoteInput" type="text" placeholder="e.g., Gave medicine, resting comfortably" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-3">
+          <button id="cancelEditBtn" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Save, Backup & GitHub Publish Modal -->
+  <div id="publishModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 my-8">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Save Data &amp; Publish to GitHub Pages</h3>
+            <p class="text-xs text-slate-500">Everything auto-saves in your browser. Use these tools to share or publish online.</p>
+          </div>
+        </div>
+        <button id="closePublishModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Option 1: Download Ready-to-Publish index.html with Embedded Data -->
+        <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-700">1. Best for GitHub Pages (Everyone Sees Your Data)</span>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Recommended</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Download a complete <code class="font-bold text-slate-800">index.html</code> file with all of your current readings, name, and settings baked right inside. Upload this file to your GitHub repository and enable <strong>GitHub Pages</strong> — anyone who opens your site link will immediately see all your saved data!
+          </p>
+          <button id="downloadBakedHtmlBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Download index.html (With Current Saved Data Baked In)</span>
+          </button>
+        </div>
+
+        <!-- Option 2: Shareable URL with Embedded State -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">2. Shareable Live Link (URL Snapshot)</span>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Once hosted on GitHub Pages, click below to copy a shareable URL that packs all your recorded readings directly into the web link (<code class="text-slate-700">#data=...</code>) so family or doctors can open it on any phone or computer.
+          </p>
+          <button id="copyShareUrlBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <span>Copy Shareable Data Link</span>
+          </button>
+        </div>
+
+        <!-- Option 3: JSON & CSV File Backup / Restore -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">3. Backup File Export &amp; Restore (.JSON / .CSV)</span>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Save a backup file of all data to your device, or restore/import a previously saved <code class="text-slate-700">.json</code> backup file at any time.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button id="exportJsonBtn" type="button" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs transition">
+              Export .JSON
+            </button>
+            <button id="exportCsvBtn" type="button" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs transition">
+              Export .CSV
+            </button>
+            <label for="importJsonInput" class="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs text-center cursor-pointer transition">
+              Import .JSON
+              <input id="importJsonInput" type="file" accept=".json,application/json" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+        <span id="modalSaveStatusText">Auto-saved locally</span>
+        <button id="donePublishModalBtn" type="button" class="px-4 py-2 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimal Aesthetic Header -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/70 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+              <span id="brotherNameDisplay">Brother</span>'s Care Log
+            </h1>
+            <button id="editNameBtn" type="button" title="Personalize name" class="text-xs text-indigo-600 hover:text-indigo-700 font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 transition">
+              Rename
+            </button>
+            <span id="autoSaveBadge" class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-0.5 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span id="autoSaveText">All Data Saved</span>
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+            <span>Live clock: <span id="liveClockDisplay" class="font-semibold text-slate-700">—</span></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Inline Name Editor -->
+      <div id="nameEditBar" class="hidden items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200">
+        <input id="brotherNameInput" type="text" maxlength="24" placeholder="Brother's name" class="text-sm px-2.5 py-1 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button id="saveNameBtn" type="button" class="text-xs font-semibold bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-700 transition">Save</button>
+        <button id="cancelNameBtn" type="button" class="text-xs font-semibold text-slate-600 px-2.5 py-1.5 rounded-xl hover:bg-slate-200 transition">Cancel</button>
+      </div>
+
+      <!-- Right Controls: Clean Unit Pill, GitHub Publish & Export -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="inline-flex rounded-2xl bg-slate-100 p-1 border border-slate-200/80" role="group">
+          <button id="unitFBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold transition bg-white text-indigo-600 shadow-sm">
+            °F (Fahrenheit)
+          </button>
+          <button id="unitCBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">
+            °C (Celsius)
+          </button>
+        </div>
+
+        <button id="openPublishModalBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>GitHub &amp; Backup</span>
+        </button>
+
+        <button id="copyReportBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          <span>Copy Summary</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Spacious Main Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Clean 4-Card Summary Ribbon -->
+    <section aria-label="Key Temperature Metrics">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Average -->
+        <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Average Temp</span>
+            <span class="w-8 h-8 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+            </span>
+          </div>
+          <div class="mt-4">
+            <div id="statAvg" class="text-3xl font-extrabold text-slate-900 tracking-tight">—</div>
+            <p id="statAvgSub" class="text-xs text-slate-500 mt-1">Median: <span id="statMedian" class="font-semibold text-slate-700">—</span></p>
+          </div>
+        </div>
+
+        <!-- Latest Reading -->
+        <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Reading</span>
+            <span id="statLatestBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500">Waiting</span>
+          </div>
+          <div class="mt-4">
+            <div id="statLatest" class="text-3xl font-extrabold text-slate-900 tracking-tight">—</div>
+            <p id="statDelta" class="text-xs text-slate-500 mt-1">No readings logged yet</p>
+          </div>
+        </div>
+
+        <!-- Lowest & Highest -->
+        <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Min &amp; Max Range</span>
+            <span id="statRangeSub" class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">Spread: —</span>
+          </div>
+          <div class="mt-4 flex items-baseline justify-between gap-2">
+            <div>
+              <span class="text-[11px] font-semibold text-emerald-600 uppercase block">Lowest</span>
+              <div id="statMin" class="text-2xl font-extrabold text-emerald-600 tracking-tight">—</div>
+              <p id="statMinSub" class="text-[11px] text-slate-400 mt-0.5">—</p>
+            </div>
+            <div class="h-8 w-px bg-slate-200"></div>
+            <div class="text-right">
+              <span class="text-[11px] font-semibold text-rose-600 uppercase block">Highest</span>
+              <div id="statMax" class="text-2xl font-extrabold text-rose-600 tracking-tight">—</div>
+              <p id="statMaxSub" class="text-[11px] text-slate-400 mt-0.5">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Entries & Stability -->
+        <div class="glass-card rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Logged</span>
+            <span id="stabilityBadge" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">±0.0°</span>
+          </div>
+          <div class="mt-4">
+            <div id="statCount" class="text-3xl font-extrabold text-slate-900 tracking-tight">0</div>
+            <p id="statTrendSub" class="text-xs text-slate-500 mt-1">Start by logging below</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace: Left (Clean Input Card) & Right (Chart + Health Insights) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+
+      <!-- Left Column: Streamlined Log Form (5 cols) -->
+      <div class="lg:col-span-5 glass-card rounded-3xl p-6 sm:p-7">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Record Temperature</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Captures exact reading &amp; time for <span id="nextReadingBadge" class="font-semibold text-indigo-600">Entry #1</span></p>
+          </div>
+          <!-- Compact Live Pill Preview -->
+          <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200/80">
+            <div class="w-2.5 h-7 bg-slate-200 rounded-full overflow-hidden flex flex-col justify-end p-0.5">
+              <div id="thermometerFill" class="thermometer-mercury w-full rounded-full bg-emerald-500" style="height: 45%;"></div>
+            </div>
+            <div class="text-right">
+              <div id="thermometerBulb" class="text-xs font-extrabold text-slate-800 leading-none">
+                <span id="thermometerBulbText">98.6°</span>
+              </div>
+              <span id="livePreviewBadge" class="text-[10px] font-bold text-emerald-600 block mt-0.5">Normal</span>
+            </div>
+          </div>
+        </div>
+
+        <form id="addReadingForm" class="space-y-5">
+          <!-- Main Temperature Input -->
+          <div>
+            <label for="tempInput" class="block text-xs font-semibold text-slate-600 mb-2">
+              Temperature (<span class="unit-label">°F</span>)
+            </label>
+            <div class="relative flex items-center">
+              <input
+                id="tempInput"
+                type="number"
+                step="0.1"
+                required
+                placeholder="98.6"
+                class="w-full pl-4 pr-14 py-3.5 rounded-2xl border border-slate-200 bg-white text-2xl font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition shadow-sm"
+              />
+              <span class="unit-label absolute right-4 text-base font-bold text-slate-400 pointer-events-none">°F</span>
+            </div>
+
+            <!-- Subtle Quick Tap Chips -->
+            <div id="presetButtonsContainer" class="flex flex-wrap gap-1.5 mt-2.5"></div>
+          </div>
+
+          <!-- Date & Time Input with "Now" Auto-Sync -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="readingTimeInput" class="text-xs font-semibold text-slate-600">Date &amp; Time of Reading</label>
+              <button id="setNowBtn" type="button" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                Use Current Time
+              </button>
+            </div>
+            <input
+              id="readingTimeInput"
+              type="datetime-local"
+              required
+              class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
+            />
+          </div>
+
+          <!-- Method & Care Tag -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="locationSelect" class="block text-xs font-semibold text-slate-600 mb-1.5">Location</label>
+              <select id="locationSelect" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition">
+                <option value="Oral">Oral (Mouth)</option>
+                <option value="Forehead">Forehead</option>
+                <option value="Ear">Ear</option>
+                <option value="Underarm">Underarm</option>
+              </select>
+            </div>
+            <div>
+              <label for="quickTagSelect" class="block text-xs font-semibold text-slate-600 mb-1.5">Care / Context</label>
+              <select id="quickTagSelect" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition">
+                <option value="">None</option>
+                <option value="Medicine Given">Medicine Given</option>
+                <option value="Cold Compress">Cold Compress</option>
+                <option value="Hydrated / Water">Hydrated / Water</option>
+                <option value="After Rest">After Rest</option>
+                <option value="Chills / Sweating">Chills / Sweating</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Optional Note -->
+          <div>
+            <label for="noteInput" class="block text-xs font-semibold text-slate-600 mb-1.5">Notes (Optional)</label>
+            <input
+              id="noteInput"
+              type="text"
+              placeholder="Symptoms, medicine dosage, or how he feels..."
+              class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 focus:bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="w-full py-3.5 px-5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>Add Temperature Reading</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Right Column: Visual Trend Chart & Zone Summary (7 cols) -->
+      <div class="lg:col-span-7 space-y-6">
+        <!-- Trend Chart Card -->
+        <div class="glass-card rounded-3xl p-6 sm:p-7">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">Temperature Timeline &amp; Average</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Visual curve across recorded timestamps</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-semibold">
+              <span class="inline-flex items-center gap-1.5 text-indigo-600">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Temp
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-amber-600">
+                <span class="w-3 h-0.5 bg-amber-500"></span> Average
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-rose-500">
+                <span class="w-3 h-0.5 bg-rose-500"></span> Fever Line
+              </span>
+            </div>
+          </div>
+
+          <div class="relative h-64 w-full">
+            <canvas id="tempChart"></canvas>
+            <!-- Clean Empty Overlay when 0 readings -->
+            <div id="chartEmptyOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-white/85 backdrop-blur-[2px] rounded-2xl text-center p-6">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+              </div>
+              <p class="text-sm font-bold text-slate-800">No temperature readings recorded yet</p>
+              <p class="text-xs text-slate-500 max-w-xs mt-1">Enter your brother's first temperature reading on the left to plot the timeline and calculate averages.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clean Health Insight & Zone Breakdown Card -->
+        <div class="glass-card rounded-3xl p-6 sm:p-7 space-y-5">
+          <div class="flex items-start gap-3 bg-indigo-50/60 rounded-2xl p-4 border border-indigo-100/80">
+            <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="text-xs text-slate-700 leading-relaxed">
+              <span class="font-bold text-slate-900 block mb-0.5">Summary Insight</span>
+              <span id="smartCareSummary">Ready to track. Log a temperature reading to see automatic averages, time-based comparisons, and fever status insights.</span>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Status Distribution</h3>
+            <div id="zoneDistributionList" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Section: Clean Chronological Log -->
+    <section class="glass-card rounded-3xl p-6 sm:p-7">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Recorded History</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Complete log with timestamps, temperature deltas &amp; notes</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div class="relative">
+            <input
+              id="searchNotesInput"
+              type="text"
+              placeholder="Search notes or method..."
+              class="w-48 sm:w-56 pl-3.5 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+          </div>
+
+          <select id="filterCategorySelect" aria-label="Filter readings by status" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+            <option value="ALL">All Statuses</option>
+            <option value="Normal">Normal Only</option>
+            <option value="Fever">Fever Only</option>
+            <option value="High Fever">High Fever Only</option>
+          </select>
+
+          <button id="toggleSortBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50/70 hover:bg-slate-100 transition">
+            Order: Newest First
+          </button>
+
+          <button id="openClearModalBtn" type="button" class="px-3.5 py-2 rounded-xl border border-rose-200 text-xs font-semibold text-rose-600 bg-rose-50/70 hover:bg-rose-100 transition">
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      <div id="readingsListContainer" class="divide-y divide-slate-100 max-h-[420px] overflow-y-auto custom-scrollbar"></div>
+    </section>
+
+  </main>
+
+  <!-- Embedded GitHub State Slot (Populated when user downloads index.html with baked-in data) -->
+  <script id="bakedGithubStateScript">
+    window.__BAKED_GITHUB_STATE__ = null;
+  </script>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'brother_temp_tracker_clean_v2';
+
+      let state = {
+        brotherName: 'Brother',
+        unit: 'F',
+        sortDesc: true,
+        filterCategory: 'ALL',
+        searchQuery: '',
+        readings: [],
+        draft: {
+          temp: '',
+          location: 'Oral',
+          tag: '',
+          note: ''
+        },
+        lastSavedAt: null
+      };
+
+      // Helper to encode/decode UTF-8 safe base64 for URL sharing
+      function encodeStateToBase64(obj) {
+        try {
+          const json = JSON.stringify({
+            brotherName: obj.brotherName,
+            unit: obj.unit,
+            readings: obj.readings
+          });
+          return btoa(encodeURIComponent(json));
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function decodeStateFromBase64(str) {
+        try {
+          const json = decodeURIComponent(atob(str));
+          return JSON.parse(json);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      // 1. Load from Baked-in GitHub State first (if published with embedded data)
+      if (window.__BAKED_GITHUB_STATE__ && typeof window.__BAKED_GITHUB_STATE__ === 'object') {
+        const b = window.__BAKED_GITHUB_STATE__;
+        if (Array.isArray(b.readings)) {
+          state.brotherName = b.brotherName || 'Brother';
+          state.unit = b.unit === 'C' ? 'C' : 'F';
+          state.readings = b.readings;
+        }
+      }
+
+      // 2. Load from Browser localStorage (overrides or supplements)
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.readings)) {
+            // If localStorage has readings or no baked state exists, restore full state
+            if (parsed.readings.length > 0 || !window.__BAKED_GITHUB_STATE__) {
+              state.brotherName = parsed.brotherName || state.brotherName;
+              state.unit = parsed.unit === 'C' ? 'C' : 'F';
+              state.sortDesc = typeof parsed.sortDesc === 'boolean' ? parsed.sortDesc : true;
+              state.filterCategory = parsed.filterCategory || 'ALL';
+              state.searchQuery = parsed.searchQuery || '';
+              state.readings = parsed.readings;
+              if (parsed.draft) {
+                state.draft = { ...state.draft, ...parsed.draft };
+              }
+              state.lastSavedAt = parsed.lastSavedAt || null;
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore storage errors
+      }
+
+      // 3. Load from Shared URL Hash (#data=...) if present in URL
+      try {
+        if (window.location.hash && window.location.hash.startsWith('#data=')) {
+          const encoded = window.location.hash.slice(6);
+          const shared = decodeStateFromBase64(encoded);
+          if (shared && Array.isArray(shared.readings)) {
+            state.brotherName = shared.brotherName || 'Brother';
+            state.unit = shared.unit === 'C' ? 'C' : 'F';
+            state.readings = shared.readings;
+          }
+        }
+      } catch (e) {
+        // Ignore URL hash errors
+      }
+
+      function updateSaveIndicator() {
+        const badgeText = document.getElementById('autoSaveText');
+        const modalStatus = document.getElementById('modalSaveStatusText');
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (badgeText) {
+          badgeText.textContent = `Saved (${state.readings.length})`;
+        }
+        if (modalStatus) {
+          modalStatus.textContent = `All ${state.readings.length} readings & settings auto-saved at ${timeStr}`;
+        }
+      }
+
+      function saveState() {
+        state.lastSavedAt = new Date().toISOString();
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+          // Ignore storage errors
+        }
+        // Also keep URL hash updated when readings exist so the browser URL is always shareable
+        try {
+          if (state.readings.length > 0) {
+            const encoded = encodeStateToBase64(state);
+            if (encoded && window.history && window.history.replaceState) {
+              window.history.replaceState(null, '', '#data=' + encoded);
+            }
+          } else if (window.location.hash.startsWith('#data=') && window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        } catch (e) {
+          // Ignore history API restrictions in sandboxed iframes
+        }
+        updateSaveIndicator();
+      }
+
+      // Format current local time for datetime-local input (YYYY-MM-DDTHH:mm)
+      function getNowLocalISO() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      // Format timestamp into readable time & date
+      function formatTimestamp(isoStr) {
+        if (!isoStr) return { time: '—', date: '—', full: '—', shortChart: '—' };
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return { time: isoStr, date: '', full: isoStr, shortChart: isoStr };
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return {
+          time: timeStr,
+          date: dateStr,
+          full: `${dateStr} at ${timeStr}`,
+          shortChart: `${timeStr} (${dateStr})`
+        };
+      }
+
+      // Live header clock update
+      function updateLiveClock() {
+        const now = new Date();
+        const str = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+          ' • ' + now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        const el = document.getElementById('liveClockDisplay');
+        if (el) el.textContent = str;
+      }
+      updateLiveClock();
+      setInterval(updateLiveClock, 1000);
+
+      // Initialize form inputs & restore any saved draft
+      const readingTimeInput = document.getElementById('readingTimeInput');
+      readingTimeInput.value = getNowLocalISO();
+
+      if (state.draft) {
+        if (state.draft.temp) document.getElementById('tempInput').value = state.draft.temp;
+        if (state.draft.location) document.getElementById('locationSelect').value = state.draft.location;
+        if (state.draft.tag) document.getElementById('quickTagSelect').value = state.draft.tag;
+        if (state.draft.note) document.getElementById('noteInput').value = state.draft.note;
+      }
+      document.getElementById('filterCategorySelect').value = state.filterCategory || 'ALL';
+      document.getElementById('searchNotesInput').value = state.searchQuery || '';
+      document.getElementById('toggleSortBtn').textContent = state.sortDesc ? 'Order: Newest First' : 'Order: Oldest First';
+
+      document.getElementById('setNowBtn').addEventListener('click', function () {
+        readingTimeInput.value = getNowLocalISO();
+        showToast('Time set to current moment');
+      });
+
+      // Unit Conversion Helpers
+      function fToC(f) {
+        return (f - 32) * (5 / 9);
+      }
+
+      function cToF(c) {
+        return (c * (9 / 5)) + 32;
+      }
+
+      function formatTemp(tempF, includeUnit = true) {
+        const val = state.unit === 'F' ? tempF : fToC(tempF);
+        const formatted = val.toFixed(1);
+        return includeUnit ? `${formatted}°${state.unit}` : formatted;
+      }
+
+      function formatDiff(diffF) {
+        const val = state.unit === 'F' ? diffF : diffF * (5 / 9);
+        const sign = val > 0 ? '+' : '';
+        return `${sign}${val.toFixed(1)}°${state.unit}`;
+      }
+
+      // Classify temperature based on Fahrenheit value
+      function classifyTemp(tempF) {
+        if (tempF < 95.0) {
+          return {
+            label: 'Low Temp',
+            short: 'Low',
+            isFever: false,
+            bg: 'bg-sky-50',
+            text: 'text-sky-700',
+            border: 'border-sky-200',
+            barColor: 'bg-sky-500',
+            hex: '#0ea5e9'
+          };
+        }
+        if (tempF <= 99.5) {
+          return {
+            label: 'Normal',
+            short: 'Normal',
+            isFever: false,
+            bg: 'bg-emerald-50',
+            text: 'text-emerald-700',
+            border: 'border-emerald-200',
+            barColor: 'bg-emerald-500',
+            hex: '#10b981'
+          };
+        }
+        if (tempF <= 100.9) {
+          return {
+            label: 'Low-Grade Fever',
+            short: 'Low-Grade',
+            isFever: true,
+            bg: 'bg-amber-50',
+            text: 'text-amber-700',
+            border: 'border-amber-200',
+            barColor: 'bg-amber-500',
+            hex: '#f59e0b'
+          };
+        }
+        if (tempF <= 102.9) {
+          return {
+            label: 'Moderate Fever',
+            short: 'Moderate',
+            isFever: true,
+            bg: 'bg-orange-50',
+            text: 'text-orange-700',
+            border: 'border-orange-200',
+            barColor: 'bg-orange-500',
+            hex: '#f97316'
+          };
+        }
+        return {
+          label: 'High Fever',
+          short: 'High Fever',
+          isFever: true,
+          bg: 'bg-rose-50',
+          text: 'text-rose-700',
+          border: 'border-rose-200',
+          barColor: 'bg-rose-600',
+          hex: '#e11d48'
+        };
+      }
+
+      // Toast notification
+      function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        const colorClasses = type === 'info'
+          ? 'bg-slate-900 text-white'
+          : 'bg-indigo-600 text-white';
+        toast.className = `pointer-events-auto px-4 py-2.5 rounded-2xl shadow-lg text-xs font-semibold flex items-center gap-2 transition-all duration-300 ${colorClasses}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(6px)';
+          setTimeout(() => toast.remove(), 300);
+        }, 2600);
+      }
+
+      // Update live thermometer indicator
+      function updateThermometerPreview(rawVal) {
+        const fillEl = document.getElementById('thermometerFill');
+        const bulbText = document.getElementById('thermometerBulbText');
+        const badgeEl = document.getElementById('livePreviewBadge');
+
+        let tempF = 98.6;
+        if (!isNaN(rawVal) && rawVal > 0) {
+          tempF = state.unit === 'F' ? rawVal : cToF(rawVal);
+        } else if (state.readings.length > 0) {
+          tempF = state.readings[state.readings.length - 1].tempF;
+        }
+
+        const pct = Math.max(12, Math.min(96, ((tempF - 94) / (106 - 94)) * 84 + 12));
+        const info = classifyTemp(tempF);
+
+        fillEl.style.height = `${pct}%`;
+        fillEl.className = `thermometer-mercury w-full rounded-full ${info.barColor}`;
+        bulbText.textContent = `${formatTemp(tempF, false)}°`;
+
+        badgeEl.className = `text-[10px] font-bold block mt-0.5 ${info.text}`;
+        badgeEl.textContent = info.short;
+      }
+
+      // Render quick-tap preset chips
+      function renderPresets() {
+        const container = document.getElementById('presetButtonsContainer');
+        const presets = state.unit === 'F'
+          ? [98.6, 99.5, 100.4, 101.2, 102.0, 103.0]
+          : [37.0, 37.5, 38.0, 38.5, 39.0, 39.5];
+
+        container.innerHTML = '';
+        presets.forEach(val => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'px-2.5 py-1 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200/70 transition';
+          btn.textContent = `${val.toFixed(1)}°`;
+          btn.addEventListener('click', () => {
+            const input = document.getElementById('tempInput');
+            input.value = val.toFixed(1);
+            state.draft.temp = input.value;
+            saveState();
+            updateThermometerPreview(val);
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      // Compute all statistics
+      function computeStats() {
+        const count = state.readings.length;
+        if (count === 0) return null;
+
+        const tempsF = state.readings.map(r => r.tempF);
+        const sumF = tempsF.reduce((a, b) => a + b, 0);
+        const avgF = sumF / count;
+        const minF = Math.min(...tempsF);
+        const maxF = Math.max(...tempsF);
+        const minIndex = tempsF.indexOf(minF);
+        const maxIndex = tempsF.lastIndexOf(maxF);
+        const latestF = tempsF[count - 1];
+        const latestReading = state.readings[count - 1];
+        const prevF = count > 1 ? tempsF[count - 2] : null;
+        const firstF = tempsF[0];
+
+        const sorted = [...tempsF].sort((a, b) => a - b);
+        const mid = Math.floor(count / 2);
+        const medianF = count % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+        const variance = tempsF.reduce((acc, val) => acc + Math.pow(val - avgF, 2), 0) / count;
+        const stdDevF = Math.sqrt(variance);
+
+        return {
+          count,
+          avgF,
+          minF,
+          maxF,
+          minReading: state.readings[minIndex],
+          maxReading: state.readings[maxIndex],
+          latestF,
+          latestReading,
+          prevF,
+          firstF,
+          medianF,
+          rangeF: maxF - minF,
+          stdDevF
+        };
+      }
+
+      // Chart.js instance
+      let chartInstance = null;
+
+      function renderChart(stats) {
+        const overlay = document.getElementById('chartEmptyOverlay');
+        if (state.readings.length === 0) {
+          overlay.classList.remove('hidden');
+        } else {
+          overlay.classList.add('hidden');
+        }
+
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        const labels = state.readings.map((r, idx) => {
+          const ts = formatTimestamp(r.timestamp);
+          return ts.time !== '—' ? ts.time : `#${idx + 1}`;
+        });
+
+        const dataPoints = state.readings.map(r =>
+          Number((state.unit === 'F' ? r.tempF : fToC(r.tempF)).toFixed(1))
+        );
+        const pointColors = state.readings.map(r => classifyTemp(r.tempF).hex);
+
+        const avgLineVal = stats
+          ? Number((state.unit === 'F' ? stats.avgF : fToC(stats.avgF)).toFixed(1))
+          : null;
+        const feverThresholdVal = state.unit === 'F' ? 100.4 : 38.0;
+
+        const avgDataset = state.readings.map(() => avgLineVal);
+        const feverDataset = state.readings.map(() => feverThresholdVal);
+
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels.length ? labels : [''],
+            datasets: [
+              {
+                label: `Temperature (°${state.unit})`,
+                data: dataPoints,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                pointBackgroundColor: pointColors,
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                borderWidth: 2.5,
+                tension: 0.35,
+                fill: true
+              },
+              {
+                label: `Average (°${state.unit})`,
+                data: avgDataset,
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              },
+              {
+                label: `Fever Line (${feverThresholdVal}°${state.unit})`,
+                data: feverDataset,
+                borderColor: '#f43f5e',
+                borderWidth: 1.5,
+                borderDash: [3, 4],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#0f172a',
+                padding: 12,
+                cornerRadius: 12,
+                titleFont: { family: 'Inter', size: 12, weight: 'bold' },
+                bodyFont: { family: 'Inter', size: 12 },
+                callbacks: {
+                  title: function (items) {
+                    if (!items.length || !state.readings.length) return '';
+                    const idx = items[0].dataIndex;
+                    const r = state.readings[idx];
+                    const ts = formatTimestamp(r.timestamp);
+                    return `Entry #${idx + 1} • ${ts.full}`;
+                  },
+                  afterBody: function (items) {
+                    if (!items.length || !state.readings.length) return '';
+                    const idx = items[0].dataIndex;
+                    const r = state.readings[idx];
+                    const status = classifyTemp(r.tempF).label;
+                    const lines = [`Status: ${status} (${r.location})`];
+                    if (r.tag) lines.push(`Care: ${r.tag}`);
+                    if (r.note) lines.push(`Note: ${r.note}`);
+                    return lines;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  font: { family: 'Inter', weight: '500', size: 11 },
+                  color: '#64748b'
+                }
+              },
+              y: {
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  font: { family: 'Inter', weight: '500', size: 11 },
+                  color: '#64748b',
+                  callback: function (value) {
+                    return value + '°';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Render entire UI
+      function renderAll() {
+        document.getElementById('brotherNameDisplay').textContent = state.brotherName;
+        document.querySelectorAll('.unit-label').forEach(el => {
+          el.textContent = `°${state.unit}`;
+        });
+
+        const unitFBtn = document.getElementById('unitFBtn');
+        const unitCBtn = document.getElementById('unitCBtn');
+        if (state.unit === 'F') {
+          unitFBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition bg-white text-indigo-600 shadow-sm';
+          unitCBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900';
+          document.getElementById('tempInput').placeholder = '98.6';
+        } else {
+          unitCBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition bg-white text-indigo-600 shadow-sm';
+          unitFBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900';
+          document.getElementById('tempInput').placeholder = '37.0';
+        }
+
+        document.getElementById('nextReadingBadge').textContent = `Entry #${state.readings.length + 1}`;
+        updateSaveIndicator();
+
+        renderPresets();
+
+        const stats = computeStats();
+
+        if (!stats) {
+          document.getElementById('statAvg').textContent = '—';
+          document.getElementById('statMedian').textContent = '—';
+          document.getElementById('statLatest').textContent = '—';
+          document.getElementById('statLatestBadge').textContent = 'No data';
+          document.getElementById('statLatestBadge').className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500';
+          document.getElementById('statDelta').textContent = 'No readings logged yet';
+          document.getElementById('statMin').textContent = '—';
+          document.getElementById('statMinSub').textContent = '—';
+          document.getElementById('statMax').textContent = '—';
+          document.getElementById('statMaxSub').textContent = '—';
+          document.getElementById('statRangeSub').textContent = 'Spread: —';
+          document.getElementById('statCount').textContent = '0';
+          document.getElementById('statTrendSub').textContent = 'Start by logging below';
+          document.getElementById('stabilityBadge').textContent = '±0.0°';
+        } else {
+          document.getElementById('statAvg').textContent = formatTemp(stats.avgF);
+          document.getElementById('statMedian').textContent = formatTemp(stats.medianF);
+
+          const latestClass = classifyTemp(stats.latestF);
+          const latestTS = formatTimestamp(stats.latestReading.timestamp);
+          document.getElementById('statLatest').textContent = formatTemp(stats.latestF);
+          document.getElementById('statLatestBadge').textContent = latestClass.short;
+          document.getElementById('statLatestBadge').className = `px-2.5 py-0.5 rounded-full text-[11px] font-bold ${latestClass.bg} ${latestClass.text}`;
+
+          if (stats.prevF !== null) {
+            const diff = stats.latestF - stats.prevF;
+            document.getElementById('statDelta').textContent = `${formatDiff(diff)} vs previous • ${latestTS.time}`;
+          } else {
+            document.getElementById('statDelta').textContent = `Logged at ${latestTS.time}`;
+          }
+
+          document.getElementById('statMin').textContent = formatTemp(stats.minF);
+          document.getElementById('statMinSub').textContent = formatTimestamp(stats.minReading.timestamp).time;
+
+          document.getElementById('statMax').textContent = formatTemp(stats.maxF);
+          document.getElementById('statMaxSub').textContent = formatTimestamp(stats.maxReading.timestamp).time;
+
+          const rangeVal = state.unit === 'F' ? stats.rangeF : stats.rangeF * (5 / 9);
+          document.getElementById('statRangeSub').textContent = `Spread: ${rangeVal.toFixed(1)}°${state.unit}`;
+
+          document.getElementById('statCount').textContent = String(stats.count);
+          const netChange = stats.latestF - stats.firstF;
+          document.getElementById('statTrendSub').textContent = stats.count > 1
+            ? `Net ${formatDiff(netChange)} since first entry`
+            : `First entry recorded`;
+
+          const stdVal = state.unit === 'F' ? stats.stdDevF : stats.stdDevF * (5 / 9);
+          document.getElementById('stabilityBadge').textContent = `±${stdVal.toFixed(1)}°${state.unit}`;
+        }
+
+        // Zone Cards
+        const zones = [
+          { title: 'Normal', range: state.unit === 'F' ? '≤ 99.5°F' : '≤ 37.5°C', key: 'Normal', dot: 'bg-emerald-500' },
+          { title: 'Low-Grade', range: state.unit === 'F' ? '99.6–100.9°F' : '37.6–38.3°C', key: 'Low-Grade Fever', dot: 'bg-amber-500' },
+          { title: 'Moderate', range: state.unit === 'F' ? '101.0–102.9°F' : '38.4–39.4°C', key: 'Moderate Fever', dot: 'bg-orange-500' },
+          { title: 'High Fever', range: state.unit === 'F' ? '≥ 103.0°F' : '≥ 39.5°C', key: 'High Fever', dot: 'bg-rose-600' }
+        ];
+
+        const zoneContainer = document.getElementById('zoneDistributionList');
+        zoneContainer.innerHTML = '';
+        zones.forEach(z => {
+          const matches = state.readings.filter(r => classifyTemp(r.tempF).label === z.key).length;
+          const pct = state.readings.length ? Math.round((matches / state.readings.length) * 100) : 0;
+          const card = document.createElement('div');
+          card.className = 'p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/60 flex flex-col justify-between';
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <span class="w-2 h-2 rounded-full ${z.dot}"></span>
+                ${z.title}
+              </span>
+              <span class="text-xs font-extrabold text-slate-900">${matches}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+              <span>${z.range}</span>
+              <span>${pct}%</span>
+            </div>
+          `;
+          zoneContainer.appendChild(card);
+        });
+
+        // Smart Care Summary
+        const summaryEl = document.getElementById('smartCareSummary');
+        if (!stats) {
+          summaryEl.textContent = `Ready to track. Log ${state.brotherName}'s temperature reading on the left to automatically calculate averages, time-based trends, and status insights.`;
+        } else {
+          const latestStatus = classifyTemp(stats.latestF);
+          const latestTS = formatTimestamp(stats.latestReading.timestamp);
+          const diffFromAvg = stats.latestF - stats.avgF;
+          const comparison = Math.abs(diffFromAvg) < 0.1
+            ? 'right at the overall average'
+            : diffFromAvg < 0
+              ? `${formatDiff(Math.abs(diffFromAvg)).replace('+', '')} below the average (${formatTemp(stats.avgF)})`
+              : `${formatDiff(diffFromAvg).replace('+', '')} above the average (${formatTemp(stats.avgF)})`;
+
+          summaryEl.textContent = `${state.brotherName}'s latest reading at ${latestTS.full} is ${formatTemp(stats.latestF)} (${latestStatus.label}), which is ${comparison}.`;
+        }
+
+        const currentInputVal = parseFloat(document.getElementById('tempInput').value);
+        updateThermometerPreview(currentInputVal);
+
+        renderChart(stats);
+        renderReadingsList(stats);
+      }
+
+      function renderReadingsList(stats) {
+        const container = document.getElementById('readingsListContainer');
+        container.innerHTML = '';
+
+        let indexed = state.readings.map((r, idx) => ({
+          ...r,
+          seq: idx + 1,
+          prevTempF: idx > 0 ? state.readings[idx - 1].tempF : null
+        }));
+
+        if (state.filterCategory !== 'ALL') {
+          indexed = indexed.filter(item => {
+            const c = classifyTemp(item.tempF);
+            if (state.filterCategory === 'Normal') return c.label === 'Normal';
+            if (state.filterCategory === 'Fever') return c.isFever;
+            if (state.filterCategory === 'High Fever') return c.label === 'High Fever';
+            return true;
+          });
+        }
+
+        if (state.searchQuery.trim() !== '') {
+          const q = state.searchQuery.toLowerCase().trim();
+          indexed = indexed.filter(item => {
+            const c = classifyTemp(item.tempF);
+            const ts = formatTimestamp(item.timestamp);
+            return (
+              (item.note && item.note.toLowerCase().includes(q)) ||
+              (item.location && item.location.toLowerCase().includes(q)) ||
+              (item.tag && item.tag.toLowerCase().includes(q)) ||
+              c.label.toLowerCase().includes(q) ||
+              ts.full.toLowerCase().includes(q)
+            );
+          });
+        }
+
+        if (state.sortDesc) {
+          indexed.reverse();
+        }
+
+        if (indexed.length === 0) {
+          container.innerHTML = `
+            <div class="py-12 text-center">
+              <p class="text-sm font-semibold text-slate-600">${state.readings.length === 0 ? 'Your temperature log is empty' : 'No matching entries found'}</p>
+              <p class="text-xs text-slate-400 mt-1">${state.readings.length === 0 ? 'Add your first reading above — every entry is automatically saved with its exact timestamp and average delta.' : 'Try clearing your search or status filter.'}</p>
+            </div>
+          `;
+          return;
+        }
+
+        indexed.forEach(item => {
+          const info = classifyTemp(item.tempF);
+          const ts = formatTimestamp(item.timestamp);
+          const diffPrev = item.prevTempF !== null ? item.tempF - item.prevTempF : null;
+          const diffAvg = stats ? item.tempF - stats.avgF : 0;
+
+          let deltaBadge = '';
+          if (diffPrev !== null) {
+            if (diffPrev > 0.05) {
+              deltaBadge = `<span class="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg">↑ ${formatDiff(diffPrev)}</span>`;
+            } else if (diffPrev < -0.05) {
+              deltaBadge = `<span class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">↓ ${formatDiff(diffPrev)}</span>`;
+            } else {
+              deltaBadge = `<span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">Steady</span>`;
+            }
+          }
+
+          const row = document.createElement('div');
+          row.className = 'py-4 px-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 hover:bg-slate-50/90 rounded-2xl transition';
+          row.innerHTML = `
+            <div class="flex items-center gap-4 min-w-0">
+              <div class="w-11 h-11 rounded-2xl bg-slate-100/90 border border-slate-200/70 flex flex-col items-center justify-center shrink-0">
+                <span class="text-[10px] font-bold uppercase text-slate-400 leading-none">Entry</span>
+                <span class="text-sm font-extrabold text-slate-800 leading-tight">#${item.seq}</span>
+              </div>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-lg font-extrabold text-slate-900">${formatTemp(item.tempF)}</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${info.bg} ${info.text}">${info.label}</span>
+                  ${deltaBadge}
+                  <span class="text-xs font-semibold text-slate-500 flex items-center gap-1 ml-1">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    ${ts.full}
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                  <span class="font-semibold text-slate-600">${item.location}</span>
+                  <span>•</span>
+                  <span>${formatDiff(diffAvg)} vs Avg</span>
+                  ${item.tag ? `<span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold">${item.tag}</span>` : ''}
+                  ${item.note ? `<span class="text-slate-600 italic truncate max-w-md">"${item.note}"</span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+              <button type="button" data-edit-id="${item.id}" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                Edit
+              </button>
+              <button type="button" data-delete-id="${item.id}" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                Delete
+              </button>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+
+        container.querySelectorAll('[data-edit-id]').forEach(btn => {
+          btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-edit-id')));
+        });
+        container.querySelectorAll('[data-delete-id]').forEach(btn => {
+          btn.addEventListener('click', () => deleteReading(btn.getAttribute('data-delete-id')));
+        });
+      }
+
+      // Auto-save form drafts as user types/selects
+      document.getElementById('tempInput').addEventListener('input', function (e) {
+        state.draft.temp = e.target.value;
+        saveState();
+        updateThermometerPreview(parseFloat(e.target.value));
+      });
+      document.getElementById('locationSelect').addEventListener('change', function (e) {
+        state.draft.location = e.target.value;
+        saveState();
+      });
+      document.getElementById('quickTagSelect').addEventListener('change', function (e) {
+        state.draft.tag = e.target.value;
+        saveState();
+      });
+      document.getElementById('noteInput').addEventListener('input', function (e) {
+        state.draft.note = e.target.value;
+        saveState();
+      });
+
+      // Add Reading Form Submit
+      document.getElementById('addReadingForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const inputEl = document.getElementById('tempInput');
+        const rawVal = parseFloat(inputEl.value);
+        if (isNaN(rawVal)) {
+          showToast('Please enter a valid temperature.', 'info');
+          return;
+        }
+
+        const tempF = state.unit === 'F' ? rawVal : cToF(rawVal);
+        if (tempF < 85 || tempF > 115) {
+          showToast(`Please enter a realistic body temperature (${state.unit === 'F' ? '85°F – 115°F' : '29.5°C – 46°C'}).`, 'info');
+          return;
+        }
+
+        const timestamp = document.getElementById('readingTimeInput').value || getNowLocalISO();
+        const location = document.getElementById('locationSelect').value;
+        const tag = document.getElementById('quickTagSelect').value;
+        const note = document.getElementById('noteInput').value.trim();
+
+        const newReading = {
+          id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          tempF: Number(tempF.toFixed(2)),
+          timestamp,
+          location,
+          tag,
+          note
+        };
+
+        state.readings.push(newReading);
+        state.draft = { temp: '', location, tag: '', note: '' };
+        saveState();
+
+        inputEl.value = '';
+        document.getElementById('readingTimeInput').value = getNowLocalISO();
+        document.getElementById('quickTagSelect').value = '';
+        document.getElementById('noteInput').value = '';
+
+        renderAll();
+        const ts = formatTimestamp(timestamp);
+        showToast(`Saved ${formatTemp(newReading.tempF)} (${ts.time})`);
+      });
+
+      // Unit Switchers
+      document.getElementById('unitFBtn').addEventListener('click', function () {
+        if (state.unit === 'F') return;
+        const inputEl = document.getElementById('tempInput');
+        if (inputEl.value !== '' && !isNaN(parseFloat(inputEl.value))) {
+          inputEl.value = cToF(parseFloat(inputEl.value)).toFixed(1);
+          state.draft.temp = inputEl.value;
+        }
+        state.unit = 'F';
+        saveState();
+        renderAll();
+        showToast('Switched to Fahrenheit (°F)');
+      });
+
+      document.getElementById('unitCBtn').addEventListener('click', function () {
+        if (state.unit === 'C') return;
+        const inputEl = document.getElementById('tempInput');
+        if (inputEl.value !== '' && !isNaN(parseFloat(inputEl.value))) {
+          inputEl.value = fToC(parseFloat(inputEl.value)).toFixed(1);
+          state.draft.temp = inputEl.value;
+        }
+        state.unit = 'C';
+        saveState();
+        renderAll();
+        showToast('Switched to Celsius (°C)');
+      });
+
+      // Brother Name Editor
+      document.getElementById('editNameBtn').addEventListener('click', function () {
+        const bar = document.getElementById('nameEditBar');
+        const input = document.getElementById('brotherNameInput');
+        input.value = state.brotherName;
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+        input.focus();
+      });
+
+      document.getElementById('saveNameBtn').addEventListener('click', function () {
+        const val = document.getElementById('brotherNameInput').value.trim();
+        if (val) {
+          state.brotherName = val;
+          saveState();
+          renderAll();
+          showToast(`Updated name to ${state.brotherName}`);
+        }
+        const bar = document.getElementById('nameEditBar');
+        bar.classList.add('hidden');
+        bar.classList.remove('flex');
+      });
+
+      document.getElementById('cancelNameBtn').addEventListener('click', function () {
+        const bar = document.getElementById('nameEditBar');
+        bar.classList.add('hidden');
+        bar.classList.remove('flex');
+      });
+
+      // Delete single reading
+      function deleteReading(id) {
+        const idx = state.readings.findIndex(r => r.id === id);
+        if (idx === -1) return;
+        state.readings.splice(idx, 1);
+        saveState();
+        renderAll();
+        showToast('Entry deleted & saved');
+      }
+
+      // Edit Modal
+      function openEditModal(id) {
+        const idx = state.readings.findIndex(r => r.id === id);
+        if (idx === -1) return;
+        const r = state.readings[idx];
+        document.getElementById('editReadingId').value = r.id;
+        document.getElementById('editModalTitle').textContent = `Edit Entry #${idx + 1}`;
+        document.getElementById('editTempInput').value = (state.unit === 'F' ? r.tempF : fToC(r.tempF)).toFixed(1);
+        document.getElementById('editLocationSelect').value = r.location || 'Oral';
+        document.getElementById('editTimeInput').value = r.timestamp || getNowLocalISO();
+        document.getElementById('editNoteInput').value = r.note || '';
+
+        const modal = document.getElementById('editModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeEditModal() {
+        const modal = document.getElementById('editModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      document.getElementById('closeEditModalBtn').addEventListener('click', closeEditModal);
+      document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+
+      document.getElementById('editReadingForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const id = document.getElementById('editReadingId').value;
+        const r = state.readings.find(item => item.id === id);
+        if (!r) return;
+
+        const rawVal = parseFloat(document.getElementById('editTempInput').value);
+        if (isNaN(rawVal)) return;
+
+        r.tempF = state.unit === 'F' ? rawVal : cToF(rawVal);
+        r.location = document.getElementById('editLocationSelect').value;
+        r.timestamp = document.getElementById('editTimeInput').value || getNowLocalISO();
+        r.note = document.getElementById('editNoteInput').value.trim();
+
+        saveState();
+        closeEditModal();
+        renderAll();
+        showToast('Entry updated & saved');
+      });
+
+      // Filter, Search & Sort Controls (All Saved!)
+      document.getElementById('filterCategorySelect').addEventListener('change', function (e) {
+        state.filterCategory = e.target.value;
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('searchNotesInput').addEventListener('input', function (e) {
+        state.searchQuery = e.target.value;
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('toggleSortBtn').addEventListener('click', function () {
+        state.sortDesc = !state.sortDesc;
+        this.textContent = state.sortDesc ? 'Order: Newest First' : 'Order: Oldest First';
+        saveState();
+        renderAll();
+      });
+
+      // Clear All Confirmation Modal
+      document.getElementById('openClearModalBtn').addEventListener('click', function () {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+
+      function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      document.getElementById('cancelClearBtn').addEventListener('click', closeConfirmModal);
+      document.getElementById('confirmClearBtn').addEventListener('click', function () {
+        state.readings = [];
+        saveState();
+        closeConfirmModal();
+        renderAll();
+        showToast('All readings cleared');
+      });
+
+      // GitHub & Backup Modal Controls
+      function openPublishModal() {
+        updateSaveIndicator();
+        const modal = document.getElementById('publishModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closePublishModal() {
+        const modal = document.getElementById('publishModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      document.getElementById('openPublishModalBtn').addEventListener('click', openPublishModal);
+      document.getElementById('closePublishModalBtn').addEventListener('click', closePublishModal);
+      document.getElementById('donePublishModalBtn').addEventListener('click', closePublishModal);
+
+      // Helper to trigger file download
+      function downloadBlob(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      // 1. Download Ready-to-Publish index.html with current data baked in
+      document.getElementById('downloadBakedHtmlBtn').addEventListener('click', function () {
+        const bakedPayload = JSON.stringify({
+          brotherName: state.brotherName,
+          unit: state.unit,
+          readings: state.readings,
+          exportedAt: new Date().toISOString()
+        });
+        let htmlSource = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        htmlSource = htmlSource.replace(
+          /<script id="bakedGithubStateScript">[\s\S]*?<\/script>/,
+          `<script id="bakedGithubStateScript">\n    window.__BAKED_GITHUB_STATE__ = ${bakedPayload};\n  <\/script>`
+        );
+        downloadBlob('index.html', htmlSource, 'text/html;charset=utf-8');
+        showToast('Downloaded index.html with your saved data!');
+      });
+
+      // 2. Copy Shareable URL with #data=...
+      document.getElementById('copyShareUrlBtn').addEventListener('click', function () {
+        const encoded = encodeStateToBase64(state);
+        const baseUrl = window.location.href.split('#')[0];
+        const shareUrl = `${baseUrl}#data=${encoded}`;
+        copyTextWithFallback(shareUrl, 'Shareable data link copied to clipboard!');
+      });
+
+      // 3. Export JSON Backup
+      document.getElementById('exportJsonBtn').addEventListener('click', function () {
+        const payload = JSON.stringify(state, null, 2);
+        downloadBlob(`${state.brotherName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'brother'}-temperature-data.json`, payload, 'application/json');
+        showToast('Downloaded .JSON backup file!');
+      });
+
+      // 4. Export CSV Backup
+      document.getElementById('exportCsvBtn').addEventListener('click', function () {
+        const headers = ['Entry', 'Timestamp', 'Temp_F', 'Temp_C', 'Status', 'Location', 'Care_Tag', 'Note'];
+        const rows = state.readings.map((r, i) => [
+          i + 1,
+          `"${(r.timestamp || '').replace(/"/g, '""')}"`,
+          r.tempF.toFixed(1),
+          fToC(r.tempF).toFixed(1),
+          `"${classifyTemp(r.tempF).label}"`,
+          `"${(r.location || '').replace(/"/g, '""')}"`,
+          `"${(r.tag || '').replace(/"/g, '""')}"`,
+          `"${(r.note || '').replace(/"/g, '""')}"`
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        downloadBlob(`${state.brotherName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'brother'}-temperature-log.csv`, csvContent, 'text/csv;charset=utf-8');
+        showToast('Downloaded .CSV spreadsheet!');
+      });
+
+      // 5. Import JSON Backup
+      document.getElementById('importJsonInput').addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            if (parsed && Array.isArray(parsed.readings)) {
+              state.brotherName = parsed.brotherName || state.brotherName;
+              state.unit = parsed.unit === 'C' ? 'C' : 'F';
+              state.readings = parsed.readings;
+              saveState();
+              renderAll();
+              closePublishModal();
+              showToast(`Restored ${state.readings.length} readings from backup!`);
+            } else {
+              showToast('Invalid backup file format.', 'info');
+            }
+          } catch (err) {
+            showToast('Could not read JSON file.', 'info');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // Copy Summary Report
+      document.getElementById('copyReportBtn').addEventListener('click', function () {
+        const stats = computeStats();
+        if (!stats) {
+          showToast('Add a reading first to copy a summary!', 'info');
+          return;
+        }
+        const latestTS = formatTimestamp(stats.latestReading.timestamp);
+        const lines = [
+          `${state.brotherName}'s Temperature Report (${state.readings.length} Entries)`,
+          `• Average: ${formatTemp(stats.avgF)} (Median: ${formatTemp(stats.medianF)})`,
+          `• Latest: ${formatTemp(stats.latestF)} [${classifyTemp(stats.latestF).label}] — ${latestTS.full}`,
+          `• Lowest: ${formatTemp(stats.minF)} (${formatTimestamp(stats.minReading.timestamp).full})`,
+          `• Highest: ${formatTemp(stats.maxF)} (${formatTimestamp(stats.maxReading.timestamp).full})`,
+          ``,
+          `Chronological Log:`,
+          ...state.readings.map((r, i) => {
+            const ts = formatTimestamp(r.timestamp);
+            return `  #${i + 1} (${ts.full}): ${formatTemp(r.tempF)} [${classifyTemp(r.tempF).label}] (${r.location})${r.tag ? ' • ' + r.tag : ''}${r.note ? ' • "' + r.note + '"' : ''}`;
+          })
+        ];
+        const text = lines.join('\n');
+        copyTextWithFallback(text, 'Report copied to clipboard!');
+      });
+
+      function copyTextWithFallback(text, successMsg) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast(successMsg);
+          }).catch(() => fallbackCopy(text, successMsg));
+        } else {
+          fallbackCopy(text, successMsg);
+        }
+      }
+
+      function fallbackCopy(text, successMsg) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast(successMsg);
+        } catch (err) {
+          showToast('Could not copy automatically', 'info');
+        }
+        document.body.removeChild(ta);
+      }
+
+      // Initial render
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
