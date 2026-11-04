@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brother's Temperature Care Tracker</title>
+  <title>Ibraahim's Temperature Care Tracker — Live Sync</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +57,7 @@
           <p class="text-xs text-slate-500">This will permanently remove all recorded entries.</p>
         </div>
       </div>
-      <p class="text-sm text-slate-600 mb-6 leading-relaxed">Are you sure you want to clear the temperature log? This action will reset your averages and timeline.</p>
+      <p class="text-sm text-slate-600 mb-6 leading-relaxed">Are you sure you want to clear the temperature log? If Live Sync is connected, this will also clear the live cloud log.</p>
       <div class="flex items-center justify-end gap-3">
         <button id="cancelClearBtn" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Cancel</button>
         <button id="confirmClearBtn" type="button" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 transition shadow-sm">Yes, Clear All</button>
@@ -107,17 +107,17 @@
     </div>
   </div>
 
-  <!-- Save, Backup & GitHub Publish Modal -->
+  <!-- Live Sync, Backup & GitHub Publish Modal -->
   <div id="publishModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 my-8">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 my-8">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-slate-900">Save Data &amp; Publish to GitHub Pages</h3>
-            <p class="text-xs text-slate-500">Everything auto-saves in your browser. Use these tools to share or publish online.</p>
+            <h3 class="text-lg font-bold text-slate-900">Live GitHub Cloud Sync &amp; Publishing</h3>
+            <p class="text-xs text-slate-500">Connected to <span class="font-semibold text-indigo-600">jawedmudassir11-bit.github.io/IBRAAHIM-TEMPRATURE-</span></p>
           </div>
         </div>
         <button id="closePublishModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition">
@@ -126,39 +126,87 @@
       </div>
 
       <div class="space-y-4">
-        <!-- Option 1: Download Ready-to-Publish index.html with Embedded Data -->
-        <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-700">1. Best for GitHub Pages (Everyone Sees Your Data)</span>
-            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Recommended</span>
+        <!-- LIVE GITHUB API REAL-TIME SYNC CONFIG -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-indigo-50/90 to-violet-50/60 border border-indigo-200/80 space-y-3.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-900">1. Automatic Live GitHub Sync (Real-Time for Everyone)</span>
+            </div>
+            <span id="liveSyncModalBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Auto-Read Active</span>
           </div>
+
           <p class="text-xs text-slate-600 leading-relaxed">
-            Download a complete <code class="font-bold text-slate-800">index.html</code> file with all of your current readings, name, and settings baked right inside. Upload this file to your GitHub repository and enable <strong>GitHub Pages</strong> — anyone who opens your site link will immediately see all your saved data!
+            Anyone opening <a href="https://jawedmudassir11-bit.github.io/IBRAAHIM-TEMPRATURE-" target="_blank" rel="noopener noreferrer" class="font-bold text-indigo-600 underline">jawedmudassir11-bit.github.io/IBRAAHIM-TEMPRATURE-</a> automatically fetches live readings from <code class="font-bold text-slate-800">data.json</code> in your repository every 15 seconds. To push new readings live from your browser automatically whenever you add an entry, enter your GitHub Personal Access Token below once:
           </p>
-          <button id="downloadBakedHtmlBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Download index.html (With Current Saved Data Baked In)</span>
-          </button>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label for="ghOwnerInput" class="block text-[11px] font-bold text-slate-600 mb-1">GitHub Username</label>
+              <input id="ghOwnerInput" type="text" value="jawedmudassir11-bit" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label for="ghRepoInput" class="block text-[11px] font-bold text-slate-600 mb-1">Repository Name</label>
+              <input id="ghRepoInput" type="text" value="IBRAAHIM-TEMPRATURE-" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="ghTokenInput" class="text-[11px] font-bold text-slate-600">GitHub Personal Access Token (with <code class="text-indigo-700">repo</code> / Contents write permission)</label>
+              <a href="https://github.com/settings/tokens/new?description=Ibraahim+Temp+Live+Sync&scopes=repo" target="_blank" rel="noopener noreferrer" class="text-[11px] font-bold text-indigo-600 hover:underline">Get Token on GitHub ↗</a>
+            </div>
+            <input id="ghTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx or github_pat_..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button id="saveLiveSyncBtn" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              <span>Connect &amp; Push Live Data Now</span>
+            </button>
+            <button id="pushFullAppToGithubBtn" type="button" class="py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition" title="Uploads this updated index.html and data.json directly to your GitHub repo">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>Deploy App + Data to GitHub Repo</span>
+            </button>
+            <button id="pullFromGithubBtn" type="button" class="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs transition">
+              Fetch Latest
+            </button>
+          </div>
+          <p id="ghSyncStatusDetail" class="text-[11px] text-slate-500">
+            Status: Listening to <code class="text-slate-700">jawedmudassir11-bit/IBRAAHIM-TEMPRATURE-/data.json</code> (auto-refreshes every 15s).
+          </p>
         </div>
 
-        <!-- Option 2: Shareable URL with Embedded State -->
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">2. Shareable Live Link (URL Snapshot)</span>
-          <p class="text-xs text-slate-500 leading-relaxed">
-            Once hosted on GitHub Pages, click below to copy a shareable URL that packs all your recorded readings directly into the web link (<code class="text-slate-700">#data=...</code>) so family or doctors can open it on any phone or computer.
-          </p>
-          <button id="copyShareUrlBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-            <span>Copy Shareable Data Link</span>
-          </button>
+        <!-- Option 2: Download Ready-to-Publish index.html or Share Link -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2.5">
+            <div>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">2. Manual index.html Download</span>
+              <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                Download <code class="text-slate-700 font-bold">index.html</code> with your current data baked in to upload manually to GitHub.
+              </p>
+            </div>
+            <button id="downloadBakedHtmlBtn" type="button" class="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+              <span>Download index.html (With Current Saved Data Baked In)</span>
+            </button>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2.5">
+            <div>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">3. Instant Share Link</span>
+              <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                Copy a direct link to your GitHub Pages site with all current readings encoded in the URL.
+              </p>
+            </div>
+            <button id="copyShareUrlBtn" type="button" class="w-full py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+              <span>Copy Shareable Data Link</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Option 3: JSON & CSV File Backup / Restore -->
+        <!-- Option 4: JSON & CSV File Backup / Restore -->
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">3. Backup File Export &amp; Restore (.JSON / .CSV)</span>
-          <p class="text-xs text-slate-500 leading-relaxed">
-            Save a backup file of all data to your device, or restore/import a previously saved <code class="text-slate-700">.json</code> backup file at any time.
-          </p>
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 block">4. Backup File Export &amp; Restore (.JSON / .CSV)</span>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button id="exportJsonBtn" type="button" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs transition">
               Export .JSON
@@ -191,21 +239,25 @@
           </svg>
         </div>
         <div>
-          <div class="flex items-center gap-2.5">
+          <div class="flex flex-wrap items-center gap-2">
             <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
-              <span id="brotherNameDisplay">Brother</span>'s Care Log
+              <span id="brotherNameDisplay">Ibraahim</span>'s Care Log
             </h1>
             <button id="editNameBtn" type="button" title="Personalize name" class="text-xs text-indigo-600 hover:text-indigo-700 font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 transition">
               Rename
             </button>
-            <span id="autoSaveBadge" class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-0.5 rounded-full">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span id="autoSaveText">All Data Saved</span>
+            <span id="autoSaveBadge" class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2.5 py-0.5 rounded-full">
+              <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span id="autoSaveText">Live Sync Ready</span>
             </span>
           </div>
-          <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-            <span>Live clock: <span id="liveClockDisplay" class="font-semibold text-slate-700">—</span></span>
+          <p class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
+            <span>Clock: <span id="liveClockDisplay" class="font-semibold text-slate-700">—</span></span>
+            <span>•</span>
+            <button id="quickSyncNowBtn" type="button" class="text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1 transition">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Sync Now</span>
+            </button>
           </p>
         </div>
       </div>
@@ -217,7 +269,7 @@
         <button id="cancelNameBtn" type="button" class="text-xs font-semibold text-slate-600 px-2.5 py-1.5 rounded-xl hover:bg-slate-200 transition">Cancel</button>
       </div>
 
-      <!-- Right Controls: Clean Unit Pill, GitHub Publish & Export -->
+      <!-- Right Controls: Clean Unit Pill, GitHub Live Sync & Export -->
       <div class="flex flex-wrap items-center gap-2">
         <div class="inline-flex rounded-2xl bg-slate-100 p-1 border border-slate-200/80" role="group">
           <button id="unitFBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold transition bg-white text-indigo-600 shadow-sm">
@@ -229,7 +281,7 @@
         </div>
 
         <button id="openPublishModalBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           <span>GitHub &amp; Backup</span>
         </button>
 
@@ -445,7 +497,7 @@
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
               </div>
               <p class="text-sm font-bold text-slate-800">No temperature readings recorded yet</p>
-              <p class="text-xs text-slate-500 max-w-xs mt-1">Enter your brother's first temperature reading on the left to plot the timeline and calculate averages.</p>
+              <p class="text-xs text-slate-500 max-w-xs mt-1">Enter Ibraahim's first temperature reading on the left to plot the timeline and sync live.</p>
             </div>
           </div>
         </div>
@@ -475,7 +527,7 @@
       <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
           <h2 class="text-lg font-bold text-slate-900">Recorded History</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Complete log with timestamps, temperature deltas &amp; notes</p>
+          <p class="text-xs text-slate-500 mt-0.5">Complete log with timestamps, temperature deltas &amp; live GitHub cloud sync</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
@@ -510,7 +562,7 @@
 
   </main>
 
-  <!-- Embedded GitHub State Slot (Populated when user downloads index.html with baked-in data) -->
+  <!-- Embedded GitHub State Slot -->
   <script id="bakedGithubStateScript">
     window.__BAKED_GITHUB_STATE__ = null;
   </script>
@@ -518,9 +570,41 @@
   <script>
     (function () {
       const STORAGE_KEY = 'brother_temp_tracker_clean_v2';
+      const GH_CONFIG_KEY = 'ibraahim_gh_live_sync_v1';
+      const LIVE_PAGES_URL = 'https://jawedmudassir11-bit.github.io/IBRAAHIM-TEMPRATURE-';
+
+      let ghConfig = {
+        owner: 'jawedmudassir11-bit',
+        repo: 'IBRAAHIM-TEMPRATURE-',
+        token: '',
+        lastSha: null,
+        lastCloudSync: null
+      };
+
+      try {
+        const rawGh = localStorage.getItem(GH_CONFIG_KEY);
+        if (rawGh) {
+          const parsedGh = JSON.parse(rawGh);
+          if (parsedGh) {
+            ghConfig.owner = parsedGh.owner || 'jawedmudassir11-bit';
+            ghConfig.repo = parsedGh.repo || 'IBRAAHIM-TEMPRATURE-';
+            ghConfig.token = parsedGh.token || '';
+          }
+        }
+      } catch (e) {}
+
+      function saveGhConfig() {
+        try {
+          localStorage.setItem(GH_CONFIG_KEY, JSON.stringify({
+            owner: ghConfig.owner,
+            repo: ghConfig.repo,
+            token: ghConfig.token
+          }));
+        } catch (e) {}
+      }
 
       let state = {
-        brotherName: 'Brother',
+        brotherName: 'Ibraahim',
         unit: 'F',
         sortDesc: true,
         filterCategory: 'ALL',
@@ -532,16 +616,25 @@
           tag: '',
           note: ''
         },
-        lastSavedAt: null
+        updatedAt: 0
       };
 
-      // Helper to encode/decode UTF-8 safe base64 for URL sharing
+      // Base64 helpers (UTF-8 safe)
+      function utf8ToBase64(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+      }
+
+      function base64ToUtf8(b64) {
+        return decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
+      }
+
       function encodeStateToBase64(obj) {
         try {
           const json = JSON.stringify({
             brotherName: obj.brotherName,
             unit: obj.unit,
-            readings: obj.readings
+            readings: obj.readings,
+            updatedAt: obj.updatedAt
           });
           return btoa(encodeURIComponent(json));
         } catch (e) {
@@ -558,76 +651,319 @@
         }
       }
 
-      // 1. Load from Baked-in GitHub State first (if published with embedded data)
+      // 1. Load from Baked-in GitHub State
       if (window.__BAKED_GITHUB_STATE__ && typeof window.__BAKED_GITHUB_STATE__ === 'object') {
         const b = window.__BAKED_GITHUB_STATE__;
         if (Array.isArray(b.readings)) {
-          state.brotherName = b.brotherName || 'Brother';
+          state.brotherName = b.brotherName || 'Ibraahim';
           state.unit = b.unit === 'C' ? 'C' : 'F';
           state.readings = b.readings;
+          state.updatedAt = b.updatedAt || 0;
         }
       }
 
-      // 2. Load from Browser localStorage (overrides or supplements)
+      // 2. Load from localStorage
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.readings)) {
-            // If localStorage has readings or no baked state exists, restore full state
             if (parsed.readings.length > 0 || !window.__BAKED_GITHUB_STATE__) {
-              state.brotherName = parsed.brotherName || state.brotherName;
+              state.brotherName = (parsed.brotherName && parsed.brotherName !== 'Brother') ? parsed.brotherName : 'Ibraahim';
               state.unit = parsed.unit === 'C' ? 'C' : 'F';
               state.sortDesc = typeof parsed.sortDesc === 'boolean' ? parsed.sortDesc : true;
               state.filterCategory = parsed.filterCategory || 'ALL';
               state.searchQuery = parsed.searchQuery || '';
               state.readings = parsed.readings;
+              state.updatedAt = parsed.updatedAt || 0;
               if (parsed.draft) {
                 state.draft = { ...state.draft, ...parsed.draft };
               }
-              state.lastSavedAt = parsed.lastSavedAt || null;
             }
           }
         }
-      } catch (e) {
-        // Ignore storage errors
-      }
+      } catch (e) {}
 
-      // 3. Load from Shared URL Hash (#data=...) if present in URL
+      // 3. Load from Shared URL Hash (#data=...)
       try {
         if (window.location.hash && window.location.hash.startsWith('#data=')) {
           const encoded = window.location.hash.slice(6);
           const shared = decodeStateFromBase64(encoded);
           if (shared && Array.isArray(shared.readings)) {
-            state.brotherName = shared.brotherName || 'Brother';
+            state.brotherName = shared.brotherName || 'Ibraahim';
             state.unit = shared.unit === 'C' ? 'C' : 'F';
             state.readings = shared.readings;
+            state.updatedAt = shared.updatedAt || Date.now();
           }
         }
-      } catch (e) {
-        // Ignore URL hash errors
-      }
+      } catch (e) {}
 
-      function updateSaveIndicator() {
+      // Populate GitHub modal fields
+      document.getElementById('ghOwnerInput').value = ghConfig.owner;
+      document.getElementById('ghRepoInput').value = ghConfig.repo;
+      document.getElementById('ghTokenInput').value = ghConfig.token;
+
+      function setSyncStatus(label, mode = 'ready', detail = '') {
         const badgeText = document.getElementById('autoSaveText');
-        const modalStatus = document.getElementById('modalSaveStatusText');
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        if (badgeText) {
-          badgeText.textContent = `Saved (${state.readings.length})`;
+        const syncDot = document.getElementById('syncDot');
+        const modalBadge = document.getElementById('liveSyncModalBadge');
+        const detailEl = document.getElementById('ghSyncStatusDetail');
+
+        if (badgeText) badgeText.textContent = label;
+        if (syncDot) {
+          syncDot.className = mode === 'syncing'
+            ? 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping'
+            : mode === 'live'
+              ? 'w-1.5 h-1.5 rounded-full bg-emerald-500'
+              : 'w-1.5 h-1.5 rounded-full bg-indigo-500';
         }
-        if (modalStatus) {
-          modalStatus.textContent = `All ${state.readings.length} readings & settings auto-saved at ${timeStr}`;
+        if (modalBadge) {
+          modalBadge.textContent = ghConfig.token ? 'Live Write + Read Connected' : 'Live Auto-Read Active';
+          modalBadge.className = ghConfig.token
+            ? 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700'
+            : 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700';
+        }
+        if (detail && detailEl) {
+          detailEl.textContent = detail;
         }
       }
 
-      function saveState() {
-        state.lastSavedAt = new Date().toISOString();
+      // LIVE CLOUD FETCH: Pull latest data.json from GitHub API (works for ALL visitors without a token!)
+      async function pullFromGithub(silent = true) {
+        const owner = (ghConfig.owner || 'jawedmudassir11-bit').trim();
+        const repo = (ghConfig.repo || 'IBRAAHIM-TEMPRATURE-').trim();
+        if (!owner || !repo) return;
+
+        if (!silent) setSyncStatus('Checking GitHub...', 'syncing');
+
+        try {
+          const headers = { 'Accept': 'application/vnd.github+json' };
+          if (ghConfig.token) {
+            headers['Authorization'] = `Bearer ${ghConfig.token}`;
+          }
+
+          const res = await fetch('https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/data.json?t=' + Date.now(), { headers, cache: 'no-store' });
+
+          if (res.ok) {
+            const meta = await res.json();
+            ghConfig.lastSha = meta.sha;
+            if (meta.content) {
+              const decoded = JSON.parse(base64ToUtf8(meta.content));
+              if (decoded && Array.isArray(decoded.readings)) {
+                const cloudTime = decoded.updatedAt || 0;
+                // Adopt cloud data if it is newer or if local has 0 readings or user clicked manual fetch
+                if (!silent || cloudTime >= (state.updatedAt || 0) || state.readings.length === 0) {
+                  state.brotherName = decoded.brotherName || state.brotherName || 'Ibraahim';
+                  state.unit = decoded.unit === 'C' ? 'C' : 'F';
+                  state.readings = decoded.readings;
+                  state.updatedAt = cloudTime;
+                  try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                  } catch (e) {}
+                  renderAll();
+                }
+                const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                setSyncStatus(`Live Synced (${state.readings.length})`, 'live', `Last synced with ${owner}/${repo}/data.json at ${nowStr}`);
+                if (!silent) showToast(`Synced ${state.readings.length} readings from GitHub!`);
+                return;
+              }
+            }
+          } else if (res.status === 404) {
+            setSyncStatus(ghConfig.token ? 'Ready to Push' : `Saved (${state.readings.length})`, 'ready', `Connected to ${owner}/${repo}. Add a reading or click Push to create data.json.`);
+          }
+        } catch (err) {
+          // Fallback to GitHub Pages raw data.json if unauthenticated API limit is hit
+          try {
+            const rawRes = await fetch('https://jawedmudassir11-bit.github.io/IBRAAHIM-TEMPRATURE-/data.json?t=' + Date.now(), { cache: 'no-store' });
+            if (rawRes.ok) {
+              const decoded = await rawRes.json();
+              if (decoded && Array.isArray(decoded.readings)) {
+                state.brotherName = decoded.brotherName || state.brotherName;
+                state.unit = decoded.unit === 'C' ? 'C' : 'F';
+                state.readings = decoded.readings;
+                state.updatedAt = decoded.updatedAt || Date.now();
+                renderAll();
+                setSyncStatus(`Live Synced (${state.readings.length})`, 'live');
+              }
+            }
+          } catch (e2) {}
+        }
+      }
+
+      // LIVE CLOUD PUSH: Commit & push data.json directly to GitHub repo
+      async function pushToGithub(showFeedback = false) {
+        const owner = (ghConfig.owner || 'jawedmudassir11-bit').trim();
+        const repo = (ghConfig.repo || 'IBRAAHIM-TEMPRATURE-').trim();
+        const token = (ghConfig.token || '').trim();
+
+        if (!token) {
+          if (showFeedback) {
+            showToast('Please paste your GitHub Personal Access Token to push live to GitHub.', 'info');
+          }
+          return false;
+        }
+
+        setSyncStatus('Syncing to GitHub...', 'syncing', `Pushing ${state.readings.length} readings to ${owner}/${repo}/data.json...`);
+
+        const payloadObj = {
+          brotherName: state.brotherName,
+          unit: state.unit,
+          readings: state.readings,
+          updatedAt: state.updatedAt || Date.now()
+        };
+        const contentB64 = utf8ToBase64(JSON.stringify(payloadObj, null, 2));
+        const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/data.json`;
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        };
+
+        try {
+          // Ensure we have current file SHA if data.json already exists
+          if (!ghConfig.lastSha) {
+            const checkRes = await fetch('https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/data.json?t=' + Date.now(), { headers, cache: 'no-store' });
+            if (checkRes.ok) {
+              const existing = await checkRes.json();
+              ghConfig.lastSha = existing.sha;
+            }
+          }
+
+          const body = {
+            message: `Live sync: ${state.brotherName}'s temperature log (${state.readings.length} entries)`,
+            content: contentB64
+          };
+          if (ghConfig.lastSha) {
+            body.sha = ghConfig.lastSha;
+          }
+
+          let putRes = await fetch(apiUrl, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(body)
+          });
+
+          // If SHA mismatch (409 or 422), fetch fresh SHA and retry once
+          if (putRes.status === 409 || putRes.status === 422) {
+            const retryCheck = await fetch('https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/data.json?t=' + Date.now(), { headers, cache: 'no-store' });
+            if (retryCheck.ok) {
+              const existing = await retryCheck.json();
+              ghConfig.lastSha = existing.sha;
+              body.sha = ghConfig.lastSha;
+              putRes = await fetch(apiUrl, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(body)
+              });
+            }
+          }
+
+          if (putRes.ok) {
+            const result = await putRes.json();
+            if (result && result.content && result.content.sha) {
+              ghConfig.lastSha = result.content.sha;
+            }
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            setSyncStatus(`Live on GitHub (${state.readings.length})`, 'live', `Successfully pushed to ${owner}/${repo}/data.json at ${nowStr}`);
+            if (showFeedback) {
+              showToast('Live synced to GitHub! Everyone opening your link will see this immediately.');
+            }
+            return true;
+          } else {
+            const errText = await putRes.text();
+            setSyncStatus('Sync Token Error', 'ready', `GitHub returned ${putRes.status}: Check token permissions (needs repo / Contents write).`);
+            if (showFeedback) {
+              showToast(`GitHub Error (${putRes.status}): Check your token permissions`, 'info');
+            }
+            return false;
+          }
+        } catch (err) {
+          setSyncStatus(`Saved Locally (${state.readings.length})`, 'ready', 'Saved in browser. Will sync when online.');
+          if (showFeedback) {
+            showToast('Network issue reaching GitHub API.', 'info');
+          }
+          return false;
+        }
+      }
+
+      // One-Click Deploy BOTH index.html and data.json to GitHub Repo
+      async function deployFullAppToGithub() {
+        const owner = (document.getElementById('ghOwnerInput').value || 'jawedmudassir11-bit').trim();
+        const repo = (document.getElementById('ghRepoInput').value || 'IBRAAHIM-TEMPRATURE-').trim();
+        const token = (document.getElementById('ghTokenInput').value || '').trim();
+
+        if (!token) {
+          showToast('Enter your GitHub Personal Access Token first to deploy directly.', 'info');
+          return;
+        }
+
+        ghConfig.owner = owner;
+        ghConfig.repo = repo;
+        ghConfig.token = token;
+        saveGhConfig();
+
+        // 1. Push data.json
+        await pushToGithub(false);
+
+        // 2. Push index.html with baked state & live sync engine
+        const bakedPayload = JSON.stringify({
+          brotherName: state.brotherName,
+          unit: state.unit,
+          readings: state.readings,
+          updatedAt: state.updatedAt || Date.now()
+        });
+        let htmlSource = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        htmlSource = htmlSource.replace(
+          /<script id="bakedGithubStateScript">[\s\S]*?<\/script>/,
+          `<script id="bakedGithubStateScript">\n    window.__BAKED_GITHUB_STATE__ = ${bakedPayload};\n  <\/script>`
+        );
+
+        const indexUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/index.html`;
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        };
+
+        try {
+          let existingSha = null;
+          const checkRes = await fetch('https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo) + '/contents/index.html?t=' + Date.now(), { headers, cache: 'no-store' });
+          if (checkRes.ok) {
+            const existing = await checkRes.json();
+            existingSha = existing.sha;
+          }
+
+          const body = {
+            message: `Deploy live-sync index.html for ${state.brotherName}'s temperature tracker`,
+            content: utf8ToBase64(htmlSource)
+          };
+          if (existingSha) body.sha = existingSha;
+
+          const putRes = await fetch(indexUrl, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(body)
+          });
+
+          if (putRes.ok) {
+            showToast('Deployed index.html & data.json directly to your GitHub repo!');
+            setSyncStatus(`Live on GitHub (${state.readings.length})`, 'live', `Deployed index.html + data.json to ${owner}/${repo}!`);
+          } else {
+            showToast(`Could not push index.html (${putRes.status}). Check token repo permissions.`, 'info');
+          }
+        } catch (e) {
+          showToast('Error deploying index.html to GitHub.', 'info');
+        }
+      }
+
+      function saveState(triggerCloudPush = false) {
+        if (triggerCloudPush) {
+          state.updatedAt = Date.now();
+        }
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch (e) {
-          // Ignore storage errors
-        }
-        // Also keep URL hash updated when readings exist so the browser URL is always shareable
+        } catch (e) {}
+
         try {
           if (state.readings.length > 0) {
             const encoded = encodeStateToBase64(state);
@@ -637,10 +973,19 @@
           } else if (window.location.hash.startsWith('#data=') && window.history && window.history.replaceState) {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
-        } catch (e) {
-          // Ignore history API restrictions in sandboxed iframes
+        } catch (e) {}
+
+        const modalStatus = document.getElementById('modalSaveStatusText');
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (modalStatus) {
+          modalStatus.textContent = `All ${state.readings.length} readings & settings saved at ${timeStr}`;
         }
-        updateSaveIndicator();
+
+        if (triggerCloudPush && ghConfig.token) {
+          pushToGithub(false);
+        } else if (!ghConfig.token) {
+          setSyncStatus(`Saved (${state.readings.length})`, 'ready');
+        }
       }
 
       // Format current local time for datetime-local input (YYYY-MM-DDTHH:mm)
@@ -796,7 +1141,7 @@
           toast.style.opacity = '0';
           toast.style.transform = 'translateY(6px)';
           setTimeout(() => toast.remove(), 300);
-        }, 2600);
+        }, 2800);
       }
 
       // Update live thermometer indicator
@@ -840,7 +1185,7 @@
             const input = document.getElementById('tempInput');
             input.value = val.toFixed(1);
             state.draft.temp = input.value;
-            saveState();
+            saveState(false);
             updateThermometerPreview(val);
           });
           container.appendChild(btn);
@@ -1040,7 +1385,6 @@
         }
 
         document.getElementById('nextReadingBadge').textContent = `Entry #${state.readings.length + 1}`;
-        updateSaveIndicator();
 
         renderPresets();
 
@@ -1131,7 +1475,7 @@
         // Smart Care Summary
         const summaryEl = document.getElementById('smartCareSummary');
         if (!stats) {
-          summaryEl.textContent = `Ready to track. Log ${state.brotherName}'s temperature reading on the left to automatically calculate averages, time-based trends, and status insights.`;
+          summaryEl.textContent = `Ready to track. Log ${state.brotherName}'s temperature reading on the left to automatically calculate averages, time-based trends, and sync live to GitHub.`;
         } else {
           const latestStatus = classifyTemp(stats.latestF);
           const latestTS = formatTimestamp(stats.latestReading.timestamp);
@@ -1195,7 +1539,7 @@
           container.innerHTML = `
             <div class="py-12 text-center">
               <p class="text-sm font-semibold text-slate-600">${state.readings.length === 0 ? 'Your temperature log is empty' : 'No matching entries found'}</p>
-              <p class="text-xs text-slate-400 mt-1">${state.readings.length === 0 ? 'Add your first reading above — every entry is automatically saved with its exact timestamp and average delta.' : 'Try clearing your search or status filter.'}</p>
+              <p class="text-xs text-slate-400 mt-1">${state.readings.length === 0 ? 'Add your first reading above — every entry is automatically saved and synced live.' : 'Try clearing your search or status filter.'}</p>
             </div>
           `;
           return;
@@ -1269,20 +1613,20 @@
       // Auto-save form drafts as user types/selects
       document.getElementById('tempInput').addEventListener('input', function (e) {
         state.draft.temp = e.target.value;
-        saveState();
+        saveState(false);
         updateThermometerPreview(parseFloat(e.target.value));
       });
       document.getElementById('locationSelect').addEventListener('change', function (e) {
         state.draft.location = e.target.value;
-        saveState();
+        saveState(false);
       });
       document.getElementById('quickTagSelect').addEventListener('change', function (e) {
         state.draft.tag = e.target.value;
-        saveState();
+        saveState(false);
       });
       document.getElementById('noteInput').addEventListener('input', function (e) {
         state.draft.note = e.target.value;
-        saveState();
+        saveState(false);
       });
 
       // Add Reading Form Submit
@@ -1317,7 +1661,7 @@
 
         state.readings.push(newReading);
         state.draft = { temp: '', location, tag: '', note: '' };
-        saveState();
+        saveState(true);
 
         inputEl.value = '';
         document.getElementById('readingTimeInput').value = getNowLocalISO();
@@ -1338,7 +1682,7 @@
           state.draft.temp = inputEl.value;
         }
         state.unit = 'F';
-        saveState();
+        saveState(true);
         renderAll();
         showToast('Switched to Fahrenheit (°F)');
       });
@@ -1351,7 +1695,7 @@
           state.draft.temp = inputEl.value;
         }
         state.unit = 'C';
-        saveState();
+        saveState(true);
         renderAll();
         showToast('Switched to Celsius (°C)');
       });
@@ -1370,7 +1714,7 @@
         const val = document.getElementById('brotherNameInput').value.trim();
         if (val) {
           state.brotherName = val;
-          saveState();
+          saveState(true);
           renderAll();
           showToast(`Updated name to ${state.brotherName}`);
         }
@@ -1390,9 +1734,9 @@
         const idx = state.readings.findIndex(r => r.id === id);
         if (idx === -1) return;
         state.readings.splice(idx, 1);
-        saveState();
+        saveState(true);
         renderAll();
-        showToast('Entry deleted & saved');
+        showToast('Entry deleted & synced');
       }
 
       // Edit Modal
@@ -1435,29 +1779,29 @@
         r.timestamp = document.getElementById('editTimeInput').value || getNowLocalISO();
         r.note = document.getElementById('editNoteInput').value.trim();
 
-        saveState();
+        saveState(true);
         closeEditModal();
         renderAll();
-        showToast('Entry updated & saved');
+        showToast('Entry updated & synced');
       });
 
-      // Filter, Search & Sort Controls (All Saved!)
+      // Filter, Search & Sort Controls
       document.getElementById('filterCategorySelect').addEventListener('change', function (e) {
         state.filterCategory = e.target.value;
-        saveState();
+        saveState(false);
         renderAll();
       });
 
       document.getElementById('searchNotesInput').addEventListener('input', function (e) {
         state.searchQuery = e.target.value;
-        saveState();
+        saveState(false);
         renderAll();
       });
 
       document.getElementById('toggleSortBtn').addEventListener('click', function () {
         state.sortDesc = !state.sortDesc;
         this.textContent = state.sortDesc ? 'Order: Newest First' : 'Order: Oldest First';
-        saveState();
+        saveState(false);
         renderAll();
       });
 
@@ -1477,15 +1821,14 @@
       document.getElementById('cancelClearBtn').addEventListener('click', closeConfirmModal);
       document.getElementById('confirmClearBtn').addEventListener('click', function () {
         state.readings = [];
-        saveState();
+        saveState(true);
         closeConfirmModal();
         renderAll();
         showToast('All readings cleared');
       });
 
-      // GitHub & Backup Modal Controls
+      // GitHub & Live Sync Modal Controls
       function openPublishModal() {
-        updateSaveIndicator();
         const modal = document.getElementById('publishModal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -1501,6 +1844,38 @@
       document.getElementById('closePublishModalBtn').addEventListener('click', closePublishModal);
       document.getElementById('donePublishModalBtn').addEventListener('click', closePublishModal);
 
+      // Connect & Push Live Data Button
+      document.getElementById('saveLiveSyncBtn').addEventListener('click', async function () {
+        ghConfig.owner = (document.getElementById('ghOwnerInput').value || 'jawedmudassir11-bit').trim();
+        ghConfig.repo = (document.getElementById('ghRepoInput').value || 'IBRAAHIM-TEMPRATURE-').trim();
+        ghConfig.token = (document.getElementById('ghTokenInput').value || '').trim();
+        saveGhConfig();
+        state.updatedAt = Date.now();
+        await pushToGithub(true);
+      });
+
+      // Deploy Full App + Data Button
+      document.getElementById('pushFullAppToGithubBtn').addEventListener('click', function () {
+        deployFullAppToGithub();
+      });
+
+      // Manual Fetch Latest Button
+      document.getElementById('pullFromGithubBtn').addEventListener('click', function () {
+        ghConfig.owner = (document.getElementById('ghOwnerInput').value || 'jawedmudassir11-bit').trim();
+        ghConfig.repo = (document.getElementById('ghRepoInput').value || 'IBRAAHIM-TEMPRATURE-').trim();
+        ghConfig.token = (document.getElementById('ghTokenInput').value || '').trim();
+        saveGhConfig();
+        pullFromGithub(false);
+      });
+
+      document.getElementById('quickSyncNowBtn').addEventListener('click', function () {
+        if (ghConfig.token) {
+          pushToGithub(true);
+        } else {
+          pullFromGithub(false);
+        }
+      });
+
       // Helper to trigger file download
       function downloadBlob(filename, content, mimeType) {
         const blob = new Blob([content], { type: mimeType });
@@ -1514,13 +1889,13 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
 
-      // 1. Download Ready-to-Publish index.html with current data baked in
+      // Download Ready-to-Publish index.html with current data baked in
       document.getElementById('downloadBakedHtmlBtn').addEventListener('click', function () {
         const bakedPayload = JSON.stringify({
           brotherName: state.brotherName,
           unit: state.unit,
           readings: state.readings,
-          exportedAt: new Date().toISOString()
+          updatedAt: state.updatedAt || Date.now()
         });
         let htmlSource = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
         htmlSource = htmlSource.replace(
@@ -1531,22 +1906,26 @@
         showToast('Downloaded index.html with your saved data!');
       });
 
-      // 2. Copy Shareable URL with #data=...
+      // Copy Shareable URL pointing directly to user's GitHub Pages link + #data=...
       document.getElementById('copyShareUrlBtn').addEventListener('click', function () {
         const encoded = encodeStateToBase64(state);
-        const baseUrl = window.location.href.split('#')[0];
-        const shareUrl = `${baseUrl}#data=${encoded}`;
-        copyTextWithFallback(shareUrl, 'Shareable data link copied to clipboard!');
+        const shareUrl = `${LIVE_PAGES_URL}/#data=${encoded}`;
+        copyTextWithFallback(shareUrl, 'GitHub Pages shareable link copied!');
       });
 
-      // 3. Export JSON Backup
+      // Export JSON Backup
       document.getElementById('exportJsonBtn').addEventListener('click', function () {
-        const payload = JSON.stringify(state, null, 2);
-        downloadBlob(`${state.brotherName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'brother'}-temperature-data.json`, payload, 'application/json');
-        showToast('Downloaded .JSON backup file!');
+        const payload = JSON.stringify({
+          brotherName: state.brotherName,
+          unit: state.unit,
+          readings: state.readings,
+          updatedAt: state.updatedAt || Date.now()
+        }, null, 2);
+        downloadBlob('data.json', payload, 'application/json');
+        showToast('Downloaded data.json!');
       });
 
-      // 4. Export CSV Backup
+      // Export CSV Backup
       document.getElementById('exportCsvBtn').addEventListener('click', function () {
         const headers = ['Entry', 'Timestamp', 'Temp_F', 'Temp_C', 'Status', 'Location', 'Care_Tag', 'Note'];
         const rows = state.readings.map((r, i) => [
@@ -1560,11 +1939,11 @@
           `"${(r.note || '').replace(/"/g, '""')}"`
         ]);
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        downloadBlob(`${state.brotherName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'brother'}-temperature-log.csv`, csvContent, 'text/csv;charset=utf-8');
+        downloadBlob(`${state.brotherName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'ibraahim'}-temperature-log.csv`, csvContent, 'text/csv;charset=utf-8');
         showToast('Downloaded .CSV spreadsheet!');
       });
 
-      // 5. Import JSON Backup
+      // Import JSON Backup
       document.getElementById('importJsonInput').addEventListener('change', function (e) {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
@@ -1576,10 +1955,10 @@
               state.brotherName = parsed.brotherName || state.brotherName;
               state.unit = parsed.unit === 'C' ? 'C' : 'F';
               state.readings = parsed.readings;
-              saveState();
+              saveState(true);
               renderAll();
               closePublishModal();
-              showToast(`Restored ${state.readings.length} readings from backup!`);
+              showToast(`Restored ${state.readings.length} readings & synced!`);
             } else {
               showToast('Invalid backup file format.', 'info');
             }
@@ -1601,6 +1980,7 @@
         const latestTS = formatTimestamp(stats.latestReading.timestamp);
         const lines = [
           `${state.brotherName}'s Temperature Report (${state.readings.length} Entries)`,
+          `Live Link: ${LIVE_PAGES_URL}`,
           `• Average: ${formatTemp(stats.avgF)} (Median: ${formatTemp(stats.medianF)})`,
           `• Latest: ${formatTemp(stats.latestF)} [${classifyTemp(stats.latestF).label}] — ${latestTS.full}`,
           `• Lowest: ${formatTemp(stats.minF)} (${formatTimestamp(stats.minReading.timestamp).full})`,
@@ -1642,8 +2022,12 @@
         document.body.removeChild(ta);
       }
 
-      // Initial render
+      // Initial render + Live Cloud Pull + 15-second real-time polling
       renderAll();
+      pullFromGithub(true);
+      setInterval(() => {
+        pullFromGithub(true);
+      }, 15000);
     })();
   </script>
 </body>
